@@ -1,0 +1,17 @@
+clear
+%% 2D dislocation dynamics
+load("matPara_W.mat");
+
+%% Define applied stress field
+KappDot = 0.02e6;
+
+Kapp = Kapp0 + KappDot * dt;
+
+sigma = Kapp / sqrt()
+%% Dislocation multiplication
+
+%% Resolved shear stress
+
+%% Mobility law
+
+%% 
