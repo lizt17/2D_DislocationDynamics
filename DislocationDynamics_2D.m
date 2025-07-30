@@ -18,17 +18,19 @@ tau_imgae = @(r) mu*b/(4*pi) ./ (r-crack_tip);       % image force for screw dis
 
 %% Define applied stress field
 KappDot = 100e6 / unitSIFrate;
-Kapp0 = 2.0e6 / unitSIF;
+% Kapp0 = 0.0e6 / unitSIF;
+Kapp0 = 0.01;
 
+%% Define output variables
+nucleation = false; 
 dt = 10;
 dxMax = 10;
-Nsteps = 10000;
-outputInterval = 1000;
-
-% time_curr = dt*linspace(0, Nsteps, Nsteps+1);
+Nsteps = 100;
+outputInterval = 10;
 time_curr = 0;
 Vmax = 1.0;
 time = zeros(1, Nsteps);
+back_stress = zeros(1, Nsteps);
 
 %% Initiate dislocation configuration
 Nd = 2;
@@ -52,7 +54,20 @@ for kInc = 1: Nsteps
     Kapp = Kapp0 + KappDot * time_curr;
     tau_applied = @(r) Kapp ./ sqrt(2*pi*r);
 
-    %% Resolved shear stress
+%% Dislocation nucleation
+if nucleation
+    for nd = 1: Nd
+        back_stress(kInc) = back_stress(kInc) + tau_interaction(r_source, disArr(nd).position); % Back stress, <0
+    end
+    rss_source = tau_applied(r_source) + back_stress(kInc) - tau_imgae(r_source); % Resolved shear stress at source
+    if rss_source >= tau_nuc
+        Nd = Nd + 1; % Increment dislocation count
+        disArr(Nd).id = Nd; % Assign new ID
+        disArr(Nd).position = r_source; % Set nucleation position
+        disArr(Nd).velocity = 0; % Initial velocity is zero
+    end
+end
+%% Resolved shear stress
     currP = zeros(1, Nd);
     tau_int = zeros(1, Nd);
 
@@ -69,22 +84,15 @@ for kInc = 1: Nsteps
 
     tau_app = tau_applied(currP); 
     tau_im = tau_imgae(currP);
-    rss = tau_app + tau_int + tau_im;
+    % rss = tau_app + tau_int - tau_im;
+    rss = tau_app + tau_int;
 
-    %% Dislocation nucleation
-    % rss_source = sigma_app(r_source); % Resolved shear stress at source
-    % if rss_source >= tau_nuc
-    %     Nd = Nd + 1; % Increment dislocation count
-    %     disArr(Nd).id = Nd; % Assign new ID
-    %     disArr(Nd).position = r_source; % Set nucleation position
-    %     disArr(Nd).velocity = 0; % Initial velocity is zero
-    % end
 
-    %% Mobility law
+%% Mobility law
     [currV, athermal] = mobilityLaw_W(rss, T);
     newP = currP + currV * dt; % Update positions based on velocities
 
-    %% Visualization
+%% Visualization
     if mod(kInc-1, outputInterval) == 0
         for i = 1:Nd
             if athermal(i)
@@ -95,21 +103,28 @@ for kInc = 1: Nsteps
         end
     end
 
-    %% Update variables for next iteration
+%% Update variables for next iteration
     for ndis = 1: Nd
         disArr(ndis).position = newP(ndis); % Update position
         disArr(ndis).velocity = currV(ndis); % store velocity
     end
 
-    x_leadingDis = disArr(Nd).position;
-    Vmax = max(currV);
+    if Nd > 0
+        x_leadingDis = disArr(Nd).position;
+        Vmax = max(currV);
+    else
+        x_leadingDis = 1000;
+        Vmax = 1.0;
+    end
     dt = dxMax/Vmax;
-    time_curr = time_curr + dxMax/Vmax;
+    time_curr = time_curr + dt;
 
 end
 
 %% 
 grid on
 title('Dislocation Dynamics Simulation')
-axis([0, x_leadingDis*1.5, 0, time(end)]);
+axis([0, x_leadingDis*1.5, 0, time_curr]);
 Kd = 1;
+disp('current SIF [MPa m^0.5] = ')
+disp(Kapp*unitSIF/1e6)
