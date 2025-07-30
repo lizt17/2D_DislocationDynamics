@@ -1,5 +1,5 @@
 
-function velocity = mobilityLaw_W(tau_in, Temp)
+function [velocity, athermal] = mobilityLaw_W(tau_in, Temp)
 % mobilityLaw_W calculates the velocity of dislocations in tungsten
 % based on the applied stress (tau_in) and temperature (Temp).
 %% material parameters - tungsten
@@ -21,6 +21,7 @@ function velocity = mobilityLaw_W(tau_in, Temp)
     tauP_SI = 2.03e9; % Peierls stress, [Pa]
     a0 = 1.5;
     Bk_SI = 8.3e-5; % Drag coefficient, [Pa/s]
+    B0_SI = 9.8e-4; % Drag coefficient in athermal regime, [Pa/s]
     L_SI = 1e-7;   % length of the dislocation segment, [m]
 
 %% Normalize units
@@ -32,12 +33,19 @@ function velocity = mobilityLaw_W(tau_in, Temp)
     tauP = tauP_SI / mu_SI;
     L = L_SI / b_SI;
     Bk = Bk_SI*cs_SI/(mu_SI*b_SI);
+    B0 = B0_SI*cs_SI/(mu_SI*b_SI);
 
 %% calculate dislocation velocity
-    dGkp = @(tau, T) dH0*( (1-(tau/tauP/a0).^p) .^q - T/T0);
-    B_screw = @(tau, T) a*( 2*a * exp(dGkp(tau, T)./(2*kB*T)) + L)*Bk/(2*h*L);
-    vs = @(tau, T) tau*b./B_screw(tau, T) .* exp(-dGkp(tau, T)./(2*kB*T));
-
-    velocity = vs(tau_in, Temp);
+    % dGkp = @(tau, T) dH0*( (1-(tau/tauP/a0).^p) .^q - T/T0);
+    % B_screw = @(tau, T) a*( 2*a * exp(dGkp(tau, T)./(2*kB*T)) + L)*Bk/(2*h*L);
+    % vs = @(tau, T) tau*b./B_screw(tau, T) .* exp(-dGkp(tau, T)./(2*kB*T));
+    Theta = tau_in/tauP/a0;
+    astress = Theta < 1; 
+    dGkp = astress .* dH0.*( (1-Theta.^p) .^q - Temp/T0 );
+    athermal = dGkp <= 0; % Check if in athermal regime
+    B_screw = a*( 2*a * exp(dGkp./(2*kB*Temp)) + L)*Bk/(2*h*L);
+    B_eff = athermal .* B0 + ~athermal .* B_screw; % Effective drag coefficient
+    velocity = tau_in*b ./ B_eff .* ...
+            (athermal + ~athermal .* exp(-dGkp./(2*kB*Temp)) ); % Dislocation velocity
 
 end
