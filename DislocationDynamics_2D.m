@@ -20,12 +20,15 @@ tau_imgae = @(r) mu*b/(4*pi) ./ (r-crack_tip);       % image force for screw dis
 KappDot = 100e6 / unitSIFrate;
 Kapp0 = 2.0e6 / unitSIF;
 
-dt = 50;
+dt = 10;
+dxMax = 10;
 Nsteps = 10000;
 outputInterval = 1000;
 
-time_curr = dt*linspace(0, Nsteps, Nsteps+1);
-Kapp = Kapp0 + KappDot * time_curr;
+% time_curr = dt*linspace(0, Nsteps, Nsteps+1);
+time_curr = 0;
+Vmax = 1.0;
+time = zeros(1, Nsteps);
 
 %% Initiate dislocation configuration
 Nd = 2;
@@ -44,56 +47,69 @@ xlabel('Dislocation Position [b]')
 ylabel('Time [b/cs]')
 
 for kInc = 1: Nsteps
-tau_applied = @(r) Kapp(kInc) ./ sqrt(2*pi*r);
 
-%% Resolved shear stress
-currP = zeros(1, Nd);
-tau_int = zeros(1, Nd);
+    time(kInc) = time_curr;
+    Kapp = Kapp0 + KappDot * time_curr;
+    tau_applied = @(r) Kapp ./ sqrt(2*pi*r);
 
-for i = 1: Nd
-    ri = disArr(i).position;
-    currP(i) = ri;
-    for j = 1: Nd
-        if i ~= j
-            rj = disArr(j).position;
-            tau_int(i) = tau_interaction(ri, rj) + tau_int(i);
+    %% Resolved shear stress
+    currP = zeros(1, Nd);
+    tau_int = zeros(1, Nd);
+
+    for i = 1: Nd
+        ri = disArr(i).position;
+        currP(i) = ri;
+        for j = 1: Nd
+            if i ~= j
+                rj = disArr(j).position;
+                tau_int(i) = tau_interaction(ri, rj) + tau_int(i);
+            end
         end
     end
-end
 
-tau_app = tau_applied(currP); 
-tau_im = tau_imgae(currP);
-rss = tau_app + tau_int + tau_im;
+    tau_app = tau_applied(currP); 
+    tau_im = tau_imgae(currP);
+    rss = tau_app + tau_int + tau_im;
 
-%% Dislocation nucleation
-% rss_source = sigma_app(r_source); % Resolved shear stress at source
-% if rss_source >= tau_nuc
-%     Nd = Nd + 1; % Increment dislocation count
-%     disArr(Nd).id = Nd; % Assign new ID
-%     disArr(Nd).position = r_source; % Set nucleation position
-%     disArr(Nd).velocity = 0; % Initial velocity is zero
-% end
+    %% Dislocation nucleation
+    % rss_source = sigma_app(r_source); % Resolved shear stress at source
+    % if rss_source >= tau_nuc
+    %     Nd = Nd + 1; % Increment dislocation count
+    %     disArr(Nd).id = Nd; % Assign new ID
+    %     disArr(Nd).position = r_source; % Set nucleation position
+    %     disArr(Nd).velocity = 0; % Initial velocity is zero
+    % end
 
-%% Mobility law
-[currV, ahtermal] = mobilityLaw_W(rss, T);
-newP = currP + currV * dt; % Update positions based on velocities
+    %% Mobility law
+    [currV, athermal] = mobilityLaw_W(rss, T);
+    newP = currP + currV * dt; % Update positions based on velocities
 
-%% Visualization
-if mod(kInc, outputInterval) == 0
-    plot(currP, time_curr(kInc), 'o' ,'LineWidth', 2, 'DisplayName', 'Dislocation Positions');
-end
+    %% Visualization
+    if mod(kInc-1, outputInterval) == 0
+        for i = 1:Nd
+            if athermal(i)
+                plot(currP(i), time_curr, 's', 'LineWidth', 2, 'DisplayName', ['Dislocation ', num2str(i)]); % Square for athermal
+            else
+                plot(currP(i), time_curr, 'o', 'LineWidth', 2, 'DisplayName', ['Dislocation ', num2str(i)]); % Circle otherwise
+            end
+        end
+    end
 
-for ndis = 1: Nd
-    disArr(ndis).position = newP(ndis); % Update position
-    disArr(ndis).velocity = currV(ndis); % store velocity
-end
+    %% Update variables for next iteration
+    for ndis = 1: Nd
+        disArr(ndis).position = newP(ndis); % Update position
+        disArr(ndis).velocity = currV(ndis); % store velocity
+    end
 
-x_leadingDis = disArr(Nd).position;
+    x_leadingDis = disArr(Nd).position;
+    Vmax = max(currV);
+    dt = dxMax/Vmax;
+    time_curr = time_curr + dxMax/Vmax;
 
 end
 
 %% 
 grid on
 title('Dislocation Dynamics Simulation')
-axis([0, x_leadingDis*2, 0, time_curr(end)]);
+axis([0, x_leadingDis*1.5, 0, time(end)]);
 Kd = 1;
