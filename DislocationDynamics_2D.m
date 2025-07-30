@@ -14,13 +14,13 @@ r_source = 30;     % [m], source position for dislocation nucleation
 T = 300; % [K], temperature
 % Function to calculate resolved shear stress
 tau_interaction = @(ri,rj) mu*b/(2*pi) / (ri-rj);   % dislocation interaction for screw dislocation
-tau_imgae = @(r) mu*b/(2*pi) ./ (r-crack_tip);       % image force for screw dislocation
+tau_imgae = @(r) mu*b/(4*pi) ./ (r-crack_tip);       % image force for screw dislocation
 
 %% Define applied stress field
 KappDot = 100e6 / unitSIFrate;
-Kapp0 = 0.0;
+Kapp0 = 2.0e6 / unitSIF;
 
-dt = 100;
+dt = 50;
 Nsteps = 10000;
 outputInterval = 1000;
 
@@ -75,7 +75,7 @@ rss = tau_app + tau_int + tau_im;
 % end
 
 %% Mobility law
-currV = mobilityLaw_W(rss, T);
+[currV, ahtermal] = mobilityLaw_W(rss, T);
 newP = currP + currV * dt; % Update positions based on velocities
 
 %% Visualization
@@ -83,10 +83,17 @@ if mod(kInc, outputInterval) == 0
     plot(currP, time_curr(kInc), 'o' ,'LineWidth', 2, 'DisplayName', 'Dislocation Positions');
 end
 
+for ndis = 1: Nd
+    disArr(ndis).position = newP(ndis); % Update position
+    disArr(ndis).velocity = currV(ndis); % store velocity
+end
+
+x_leadingDis = disArr(Nd).position;
+
 end
 
 %% 
 grid on
 title('Dislocation Dynamics Simulation')
-axis([0, 1000, 0, time_curr(end)]);
+axis([0, x_leadingDis*2, 0, time_curr(end)]);
 Kd = 1;
