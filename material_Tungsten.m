@@ -7,6 +7,8 @@ KG_SI = 3.1e6;  % [Pa`m^0.5]
 nu = 0.28;
 tauP_SI = 960e6;  % [Pa]
 E_SI = 2*(1+nu)*mu_SI;  % [Pa]
+rho_SI = 19250; % [kg/m^3]
+cs_SI = sqrt(mu_SI/rho_SI); % [m/s], speed of shear wave
 
 % unified
 b = 1;
@@ -18,8 +20,8 @@ Elas = E_SI / mu_SI;
 % mobility law parameters
 dH0 = 1.63;     % [eV]
 Tc = 800;       % [K]
-Be = 3.3e-7;    % [Pa`s/K]
-Bk = 8.3e-5;    % [Pa`s]
+Be_SI = 3.3e-7;    % [Pa`s/K]
+Bk_SI = 8.3e-5;    % [Pa`s]
 p = 0.999;
 q = 1;
 
