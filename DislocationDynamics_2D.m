@@ -24,9 +24,9 @@ Kapp0 = 0.1;
 %% Define output variables
 nucleation = true; 
 dt = 10;
-dxMax = 100;
-Nsteps = 100000;
-outputInterval = 5000;
+dxMax = 10;
+Nsteps = 10000;
+outputInterval = 500;
 time_curr = 0;
 Vmax = 1.0;
 time = zeros(1, Nsteps);
@@ -82,6 +82,10 @@ end
     tau_int = zeros(1, Nd);
 
     for i = 1: Nd
+        if i > disArr(i).id
+            disp('Error: i is not less than id. Stopping execution.');
+            return;
+        end
         ri = disArr(i).position;
         currP(i) = ri;
         for j = 1: Nd
@@ -99,8 +103,25 @@ end
 
 %% Mobility law
     [currV, athermal] = mobilityLaw_W(rss, T);
+    Vmax = max(abs(currV));
 
-%% Move dislocations
+%% Move dislocations, time increment dt 
+%% Time increment calculation model 1
+    % dcurrP = -diff(currP); % Calculate dislocation spacing, 1-2, 2-3, 3-4, ...
+    % dcurrV = -diff(currV); % Calculate velocity difference, 1-2, 2-3, 3-4, ...
+    % dtGuess = - dcurrP ./ dcurrV; 
+    % dtGuess(dtGuess <= 0) = dxMax / Vmax; 
+    % if isempty(dtGuess)
+    %     dtGuess = dxMax / Vmax; % Default time step if no valid dtGuess
+    % end
+    % dt = 0.5*min(dtGuess); % Use the minimum time step to ensure stability
+%% Time increment calculation model 2
+    dcurrP = -diff(currP); % Calculate dislocation spacing, 1-2, 2-3, 3-4, ...
+    if isempty(dcurrP(dcurrP > 0))
+        dt = dxMax / Vmax; % Default time step if no dislocations
+    else
+        dt = min(dcurrP(dcurrP > 0)) / Vmax; 
+    end
     newP = currP + currV * dt; % Update positions based on velocities
     outBoundary = find(newP < crack_tip);
     newP(outBoundary) = crack_tip;
@@ -125,10 +146,6 @@ end
 
     if Nd > 0
         x_leadingDis = disArr(1).position;
-        Vmax = max(abs(currV));
-    else
-        x_leadingDis = 1000;
-        Vmax = 1.0;
     end
     
 %% Dislocation annihilation
