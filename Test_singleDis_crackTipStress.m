@@ -118,7 +118,7 @@ end
         x_leadingDis = 1000;
         Vmax = 1.0;
     end
-    dt = abs(dxMax/Vmax);
+    dt = dxMax/Vmax;
     time_curr = time_curr + dt;
 
 end

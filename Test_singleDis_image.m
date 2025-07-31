@@ -10,7 +10,7 @@ unitTime = b_SI / cs_SI;
 % Assming crack-tip located at origin
 crack_tip = 0;
 tau_nuc = 100e6 / mu_SI;        % [Pa], critical resolved shear stress for dislocation nucleation
-r_source = 30;     % [m], source position for dislocation nucleation
+r_source = 1500;     % [m], source position for dislocation nucleation
 T = 300; % [K], temperature
 % Function to calculate resolved shear stress
 tau_interaction = @(ri,rj) mu*b/(2*pi) / (ri-rj);   % dislocation interaction for screw dislocation
@@ -19,7 +19,7 @@ tau_imgae = @(r) mu*b/(4*pi) ./ (r-crack_tip);       % image force for screw dis
 %% Define applied stress field
 KappDot = 0e6 / unitSIFrate;
 % Kapp0 = 0.0e6 / unitSIF;
-Kapp0 = 0.01;
+Kapp0 = 0.0;
 
 %% Define output variables
 nucleation = false; 
@@ -84,8 +84,7 @@ end
 
     tau_app = tau_applied(currP); 
     tau_im = tau_imgae(currP);
-    % rss = tau_app + tau_int - tau_im;
-    rss = tau_app + tau_int;
+    rss = tau_app + tau_int - tau_im;
 
 
 %% Mobility law
@@ -126,11 +125,16 @@ end
 %% 
 grid on
 title('Dislocation Dynamics Simulation')
-axis([0, x_leadingDis*1.5, 0, time_curr]);
+axis([0, r_source*1.5, 0, time_curr]);
 Kd = 1;
 disp('current SIF [MPa m^0.5] = ')
 disp(Kapp*unitSIF/1e6)
 
 %% Analytical solution for single dislocation
-r_dis = ( 3/2 * time * Kapp0 / sqrt(2*pi) + r_source^(3/2) ).^(2/3);
-plot(r_dis, time, 'k--', 'LineWidth', 1.5, 'DisplayName', 'Analytical Solution');
+% K-field stress
+% r_dis = ( 3/2 * time * Kapp0 / sqrt(2*pi) + r_source^(3/2) ).^(2/3);
+% plot(r_dis, time, 'k--', 'LineWidth', 1.5, 'DisplayName', 'Analytical Solution');
+
+% image stress
+r_dis = sqrt(r_source^2 - mu*b*time/2/pi);
+plot(r_dis, time, 'k--', 'LineWidth', 1.5, 'DisplayName', 'Analytical Solution, image stress');
