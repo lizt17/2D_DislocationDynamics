@@ -33,7 +33,10 @@ time = zeros(1, Nsteps);
 back_stress = zeros(1, Nsteps);
 
 %% Initiate dislocation configuration
-Nd = 1;
+% Nd always represents the number of dislocations
+% nextDisID-1 is total number of dislocations include annihilated ones
+Nd = 5;
+nextDisID = Nd + 1; 
 disArr = struct('id', {}, 'position', {}, 'velocity', {});
 
 for i = 1: Nd
@@ -62,9 +65,10 @@ if nucleation
     rss_source = tau_applied(r_source) + back_stress(kInc) - tau_imgae(r_source); % Resolved shear stress at source
     if rss_source >= tau_nuc
         Nd = Nd + 1; % Increment dislocation count
-        disArr(Nd).id = Nd; % Assign new ID
+        disArr(Nd).id = nextDisID; % Assign new ID
         disArr(Nd).position = r_source; % Set nucleation position
         disArr(Nd).velocity = 0; % Initial velocity is zero
+        nextDisID = nextDisID + 1; % Increment next dislocation ID
     end
 end
 %% Resolved shear stress
@@ -88,6 +92,8 @@ end
 
 %% Mobility law
     [currV, athermal] = mobilityLaw_W(rss, T);
+
+%% Move dislocations
     newP = currP + currV * dt; % Update positions based on velocities
 
 %% Visualization
@@ -107,6 +113,11 @@ end
         disArr(ndis).velocity = currV(ndis); % store velocity
     end
 
+%% Dislocation annihilation
+    outBoundary = find(newP < crack_tip);
+    disArr(outBoundary) = []; % Remove dislocations that moved out of boundary
+    Nd = Nd - length(outBoundary);
+
     if Nd > 0
         x_leadingDis = disArr(Nd).position;
         Vmax = max(currV);
@@ -114,7 +125,7 @@ end
         x_leadingDis = 1000;
         Vmax = 1.0;
     end
-    dt = abs(dxMax/Vmax);
+    dt = min(abs(dxMax/Vmax), 1e5);
     time_curr = time_curr + dt;
 
 end
