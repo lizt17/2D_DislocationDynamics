@@ -84,14 +84,10 @@ end
 
     tau_app = tau_applied(currP); 
     tau_im = tau_imgae(currP);
-    % rss = tau_app + tau_int - tau_im;
-    rss = tau_app + tau_int;
-
+    rss = tau_app + tau_int - tau_im;
 
 %% Mobility law
-    % [currV, athermal] = mobilityLaw_W(rss, T);
-    currV = rss .* b / 1;
-    athermal = zeros(size(rss));
+    [currV, athermal] = mobilityLaw_W(rss, T);
     newP = currP + currV * dt; % Update positions based on velocities
 
 %% Visualization
@@ -130,7 +126,3 @@ axis([0, x_leadingDis*1.5, 0, time_curr]);
 Kd = 1;
 disp('current SIF [MPa m^0.5] = ')
 disp(Kapp*unitSIF/1e6)
-
-%% Analytical solution for single dislocation
-r_dis = ( 3/2 * time * Kapp0 / sqrt(2*pi) + r_source^(3/2) ).^(2/3);
-plot(r_dis, time, 'k--', 'LineWidth', 1.5, 'DisplayName', 'Analytical Solution');
