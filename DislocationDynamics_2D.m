@@ -19,7 +19,7 @@ tau_imgae = @(r) mu*b/(4*pi) ./ (r-crack_tip);       % image force for screw dis
 %% Define applied stress field
 KappDot = 10e6 / unitSIFrate;
 % Kapp0 = 0.0e6 / unitSIF;
-Kapp0 = 0.1;
+Kapp0 = 0.053;
 
 %% Define output variables
 nucleation = true; 
@@ -123,7 +123,7 @@ end
         dt = min(dcurrP(dcurrP > 0)) / Vmax; 
     end
     newP = currP + currV * dt; % Update positions based on velocities
-    outBoundary = find(newP < crack_tip);
+    outBoundary = find(newP <= crack_tip);
     newP(outBoundary) = crack_tip;
 
 %% Visualization
@@ -164,6 +164,7 @@ axis([0, x_leadingDis*1.5, 0, time_curr]);
 Kd = 1;
 disp('current SIF [MPa m^0.5] = ')
 disp(Kapp*unitSIF/1e6)
+disp(['Annihilated dislocations = ', num2str(nextDisID - Nd - 1)]);
 
 figure
 hold on
