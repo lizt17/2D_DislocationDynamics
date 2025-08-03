@@ -1,0 +1,61 @@
+#include <vector>
+#include <cmath>
+
+struct mobilityLaw_W {
+    // Constants
+    const double kB_eV = 8.6173303e-5; // eV/K
+    const double Tm = 3695.0;
+    const double a_SI = 3.16e-10;
+    const double b_SI = a_SI * std::sqrt(3.0) / 2.0;
+    const double mu_SI = 161e9;
+    const double h_SI = a_SI * std::sqrt(2.0 / 3.0);
+    const double w_SI = a_SI * 25.0;
+    const double rho_SI = 19250.0;
+    const double cs_SI = std::sqrt(mu_SI / rho_SI);
+
+    // Dislocation parameters
+    const double dH0 = 1.63;
+    const double p = 0.86;
+    const double q = 1.69;
+    const double T0 = 0.8 * Tm;
+    const double tauP_SI = 2.03e9;
+    const double a0 = 1.5;
+    const double Bk_SI = 8.3e-5;
+    const double B0_SI = 9.8e-4;
+    const double L_SI = 1e-7;
+
+    // Normalized constants
+    const double a = a_SI / b_SI;
+    const double h = h_SI / b_SI;
+    const double L = L_SI / b_SI;
+    const double w = w_SI / b_SI;
+    const double tauP = tauP_SI / mu_SI;
+    const double Bk = Bk_SI * cs_SI / (mu_SI * b_SI);
+    const double B0 = B0_SI * cs_SI / (mu_SI * b_SI);
+    const double factor1 = 2.0 * a;
+    const double factor2 = 1.0 / (2.0 * h * L);
+    const double inv2kB = 1.0 / (2.0 * kB_eV);
+
+    static double sigmoid(const double & x)
+    {
+        return 2.0/(1.0+exp(2.0*x));
+    }
+    std::pair<bool, double> velocity(double rss, double Temp) 
+    {
+        double tau_abs = std::abs(rss);
+        int sign = (rss>0.0)? 1.0 : -1.0;
+        double Theta = tau_abs / tauP / a0;
+        const double dGkp = (Theta<1.0)? (std::pow(1.0-std::pow(Theta,p),q)-Temp/T0) : 0.0;
+        const double dGkp1 = (dGkp>0.0)? dGkp : 0.0;
+        const double expCoeff = exp(-dH0*dGkp1/(2.0*kB_eV*Temp));
+        // Compute screw drag coeff
+        const double sgm=0.5*sigmoid(-0.5*(0.05-dGkp1)/0.05);
+        const double Bs=Bk*w/(2.0*h)*(1.0-sgm)+B0*sgm; //kink-dominated to drag-dominated interpolation
+        // Compute screw velocity
+        double vs=std::fabs(tau_abs)/Bs*expCoeff;
+        bool athermal = dGkp <= 0.0;
+
+        return std::make_pair(athermal, vs*sign);
+    }
+
+};
