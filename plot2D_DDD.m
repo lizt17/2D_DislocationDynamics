@@ -68,7 +68,7 @@ for n = 1:numFrames
     dis = dislocation_data_struct(n).data;
     
     if(~isempty(dis))
-        P = dis(:,2);
+        P = dis(:,3);
         ids = dis(:,1);
         scatter(P, time(n) * ones(size(P)), 50, ids, 'filled'); % Use scatter to color by id
         colorbar; % Add a colorbar to indicate the id values

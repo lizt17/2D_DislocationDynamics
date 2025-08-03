@@ -7,6 +7,7 @@
 #include <string>
 #include <map>
 #include <memory>
+#include <iomanip>
 #include "MobilityLaw_W.hpp"
 #include "DislocationProperty.hpp"
 
@@ -29,11 +30,11 @@ const double b = 1.0;
 // Parameters
 const double tau_nuc = 5000e6 / mu_SI;
 const double r_source = 50.0;
-const double T = 200;
+const double T = 1200;
 const double crack_tip = 0.0;
 const double KappDot = 500e6 / unitSIFrate;
 const double Kapp0 = 0.35e6 / unitSIF;
-const long int Nsteps = 5000000;
+const long int Nsteps = 3000000;
 const int outputNum = 100;
 const int outputInterval = Nsteps / outputNum;
 const double shearWaveFraction = 1e-4;
@@ -63,7 +64,7 @@ int main() {
     std::cout << "nucleation Kapp0 [MPa m^0.5]= " << K0nuc * unitSIF / 1e6<< std::endl;
 
     std::string outputDir = "output/";
-    std::ofstream outfile(outputDir+"outputVars.csv");
+    std::ofstream outfile(outputDir+"outputVars.csv", std::ios::trunc);
     int outFileIndex = 0;
     // outfile << "time" << std::endl << "Number of dislocations" << std::endl << "RSS on source" << std::endl
     // << "Kapp" << std::endl << "Ktip";
@@ -157,15 +158,27 @@ int main() {
                 //     newP[i] = r_source; // Reset position to source if moving towards crack tip
                 // }
             }
+            bool isDescending = std::is_sorted(newP.begin(), newP.end(), std::greater<double>());
+            if(!isDescending)
+            {
+                std::cout << "Dislocations not sorted in descending order, sorting..." << std::endl;
+                for (int i = 0; i < Nd; ++i)
+                {
+                    std::cout << "Dislocation " << i << ": " << newP[i] << "velocity = "
+                    << currV[i] <<std::endl;
+                } 
+                break;
+            }
 
-            for (int i = 0; i < Nd; ++i) {
+            for (int i = 0; i < Nd; ++i) 
+            {
                 disArr[i]->setPosition(newP[i]);
                 disArr[i]->setVelocity(currV[i]);
                 disArr[i]->setAthermal(athermal[i]);
             }
 
-
-            for (int i = toRemove.size() - 1; i >= 0; --i) {
+            for (int i = toRemove.size() - 1; i >= 0; --i) 
+            {
                 disArr.erase(disArr.begin() + toRemove[i]);
                 --Nd;
             }
@@ -185,12 +198,20 @@ int main() {
         {
             outfile << time << ", " << Nd << ", " << rss_source << ", " << Kapp * unitSIF / 1e6
             << ", " << (Kapp-KD) * unitSIF / 1e6 << ", " << back_stress << ", " << dx <<"\n";
-            std::ofstream fileDis(outputDir + "dislocation_" + std::to_string(outFileIndex)+".csv");
+            std::ofstream fileDis(outputDir + "dislocation_" + std::to_string(outFileIndex)+".csv", std::ios::trunc);
             for (int i = 0; i < Nd; ++i)
             {
-                fileDis << disArr[i]->getId() << ", " << disArr[i]->getPosition() << 
-                disArr[i]->isAthermal() << ", " << disArr[i]->getVelocity() << std::endl;
+                fileDis << disArr[i]->getId() << ", " << disArr[i]->isAthermal() << ", ";
+                fileDis << std::scientific << std::setprecision(9)<< disArr[i]->getPosition() << ", "
+                        << disArr[i]->getVelocity() << std::endl;
             }
+
+            // if(outFileIndex == 20)
+            // {
+            //     std::cout << "dislocation "<< Nd-1 << ", P = " << disArr[Nd-1]->getPosition() << std::endl;
+            //     break;
+            // }
+
             outFileIndex++;
             fileDis.close();
         }
