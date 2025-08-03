@@ -1,8 +1,6 @@
 #ifndef DISLOCATIONPROPERTY_H
 #define DISLOCATIONPROPERTY_H
 
-#include <stdexcept>
-
 class Dislocation {
 public:
     // Constructor
