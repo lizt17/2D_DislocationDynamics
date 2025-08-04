@@ -18,7 +18,8 @@ const double b_SI = 2.74e-10;   // [m], burgers vector
 const double rho_SI = 19250.0;  // [kg/m^3]
 const double cs_SI = sqrt(mu_SI/rho_SI); // [m/s], speed of shear wave
 const double tauP_SI = 2030e6;  // [Pa]
-const double KG_SI = 3.1e6; // [Pa], clevage fracture toughness
+const double tau_friction_SI = 500.0e6; // [Pa], friction stress
+const double KG_SI = 2.1e6; // [Pa], clevage fracture toughness
 const double unitSIF = mu_SI * sqrt(b_SI);
 const double unitSIFrate = mu_SI * cs_SI / sqrt(b_SI);
 const double unitTime = b_SI / cs_SI;
@@ -29,22 +30,23 @@ const double b = 1.0;
 
 // Parameters
 const double tau_nuc = 5000e6 / mu_SI;
+const double tau_friction = tau_friction_SI / mu_SI; 
 const double r_source = 50.0;
-const double T = 1200;
+const double T = 600;
 const double crack_tip = 0.0;
-const double KappDot = 500e6 / unitSIFrate;
+const double KappDot = 100e6 / unitSIFrate;
 const double Kapp0 = 0.35e6 / unitSIF;
-const long int Nsteps = 3000000;
+const long int Nsteps = 5e7;
 const int outputNum = 100;
 const int outputInterval = Nsteps / outputNum;
 const double shearWaveFraction = 1e-4;
 
-double dxMax = 10.0;
+double dxMax = 20.0;
 
 // Stress functions
 double tau_interaction(double ri, double rj) 
 {
-    return mu * b / (2 * M_PI) / (ri - rj);
+    return mu * b / (2 * M_PI) / (ri - rj) * sqrt(rj/ri);
 }
 double tau_image(double r) 
 {
@@ -87,11 +89,11 @@ int main() {
             back_stress += tau_interaction(r_source, P);
             KD += mu * b / sqrt(2 * M_PI * P);
         }
-        back_stress = std::max(back_stress, -0.01);
+        // back_stress = std::max(back_stress, -0.01);
 
-        double rss_source = tau_applied(Kapp-KD, r_source) + back_stress - tau_image(r_source);
+        double rss_source = tau_applied(Kapp, r_source) + back_stress - tau_image(r_source);
 
-        if (rss_source >= tau_nuc + mu*b/(2*M_PI*r_source) ) 
+        if ( rss_source >= tau_nuc + tau_friction ) 
         {
             // Nucleate a new dislocation
             Dislocation nucleatedDis = {nextDisID, r_source+b, 0.0};
@@ -130,7 +132,8 @@ int main() {
                 tau_app[i] = tau_applied(Kapp, currP[i]);
                 tau_im[i] = tau_image(currP[i]);
                 rss[i] = tau_app[i] + tau_int[i] - tau_im[i];
-                auto vel = mobilityLaw.velocity(rss[i], T);
+                rss[i] = rss[i]<=tau_friction? 0.0 : rss[i] - tau_friction;
+                auto vel = mobilityLaw.velocity_Q(rss[i], T);
                 currV[i] = vel.second;
                 athermal[i] = vel.first;
                 Vmax = std::max(Vmax, std::abs(currV[i]));
@@ -197,7 +200,18 @@ int main() {
         if (kInc % outputInterval == 0) 
         {
             outfile << time << ", " << Nd << ", " << rss_source << ", " << Kapp * unitSIF / 1e6
-            << ", " << (Kapp-KD) * unitSIF / 1e6 << ", " << back_stress << ", " << dx <<"\n";
+            << ", " << (Kapp-KD) * unitSIF / 1e6 << ", " << back_stress << ", " << dx << ", ";
+            if(disArr.size() > 0) 
+            {
+                outfile << disArr[0]->getPosition();
+                outfile << ", " << disArr[0]->getVelocity();
+            }
+            else
+            {
+                outfile << 0.0;
+                outfile << ", " << 0.0;
+            }
+            outfile << std::endl;
             std::ofstream fileDis(outputDir + "dislocation_" + std::to_string(outFileIndex)+".csv", std::ios::trunc);
             for (int i = 0; i < Nd; ++i)
             {
@@ -217,11 +231,11 @@ int main() {
         }
 
         time += dt;
-        if ((Kapp-KD) * unitSIF >= KG_SI)
-        {
-            std::cout << "Ktip reached fracture toughness, stopping simulation." << std::endl;
-            break;
-        }
+        // if ((Kapp-KD) * unitSIF >= KG_SI)
+        // {
+        //     std::cout << "Ktip reached fracture toughness, stopping simulation." << std::endl;
+        //     break;
+        // }
     }
 
     std::cout << "Number of dislocations = " << Nd << std::endl;

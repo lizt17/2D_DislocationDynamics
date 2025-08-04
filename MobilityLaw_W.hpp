@@ -58,4 +58,18 @@ struct mobilityLaw_W {
         return std::make_pair(athermal, vs*sign);
     }
 
+    std::pair<bool, double> velocity_Q(double rss, double Temp)
+    {
+        double v0_SI = 5.8e5; // [m/s]
+        double Q_eV = 1.75;
+        double VA = 20.0;
+        double v0 = v0_SI / cs_SI;
+
+        double dH = Q_eV - rss * VA;
+        dH = dH<=0.0 ? 0.0 : dH;
+        double vel = v0 * std::exp(-dH / (kB_eV * Temp));
+        return std::make_pair(false, vel);
+
+    }
+
 };
