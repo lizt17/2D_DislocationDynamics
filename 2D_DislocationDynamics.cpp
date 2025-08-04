@@ -18,7 +18,7 @@ const double b_SI = 2.74e-10;   // [m], burgers vector
 const double rho_SI = 19250.0;  // [kg/m^3]
 const double cs_SI = sqrt(mu_SI/rho_SI); // [m/s], speed of shear wave
 const double tauP_SI = 2030e6;  // [Pa]
-const double tau_friction_SI = 500.0e6; // [Pa], friction stress
+const double tau_friction_SI = 0.0e6; // [Pa], friction stress
 const double KG_SI = 2.1e6; // [Pa], clevage fracture toughness
 const double unitSIF = mu_SI * sqrt(b_SI);
 const double unitSIFrate = mu_SI * cs_SI / sqrt(b_SI);
@@ -29,19 +29,20 @@ const double mu = 1.0;
 const double b = 1.0;
 
 // Parameters
-const double tau_nuc = 5000e6 / mu_SI;
+const double tau_nuc = 500e6 / mu_SI;
 const double tau_friction = tau_friction_SI / mu_SI; 
-const double r_source = 50.0;
-const double T = 600;
+const double r_source = 200.0;
+const double T = 200;
 const double crack_tip = 0.0;
 const double KappDot = 100e6 / unitSIFrate;
 const double Kapp0 = 0.35e6 / unitSIF;
-const long int Nsteps = 5e7;
-const int outputNum = 100;
+const long int Nsteps = 10e6;
+const int outputNum = 200;
 const int outputInterval = Nsteps / outputNum;
 const double shearWaveFraction = 1e-4;
+const int maxNumDis = 5000;
 
-double dxMax = 20.0;
+double dxMax = 100.0;
 
 // Stress functions
 double tau_interaction(double ri, double rj) 
@@ -93,7 +94,7 @@ int main() {
 
         double rss_source = tau_applied(Kapp, r_source) + back_stress - tau_image(r_source);
 
-        if ( rss_source >= tau_nuc + tau_friction ) 
+        if ( rss_source >= tau_nuc + tau_friction && Nd < maxNumDis) 
         {
             // Nucleate a new dislocation
             Dislocation nucleatedDis = {nextDisID, r_source+b, 0.0};
@@ -133,7 +134,9 @@ int main() {
                 tau_im[i] = tau_image(currP[i]);
                 rss[i] = tau_app[i] + tau_int[i] - tau_im[i];
                 rss[i] = rss[i]<=tau_friction? 0.0 : rss[i] - tau_friction;
-                auto vel = mobilityLaw.velocity_Q(rss[i], T);
+                // auto vel = mobilityLaw.velocity_Q(rss[i], T);
+                // auto vel = mobilityLaw.velocity_Inf(rss[i], T);
+                auto vel = mobilityLaw.velocity(rss[i], T);
                 currV[i] = vel.second;
                 athermal[i] = vel.first;
                 Vmax = std::max(Vmax, std::abs(currV[i]));
@@ -178,6 +181,7 @@ int main() {
                 disArr[i]->setPosition(newP[i]);
                 disArr[i]->setVelocity(currV[i]);
                 disArr[i]->setAthermal(athermal[i]);
+                disArr[i]->setRss(rss[i]);
             }
 
             for (int i = toRemove.size() - 1; i >= 0; --i) 
@@ -205,10 +209,12 @@ int main() {
             {
                 outfile << disArr[0]->getPosition();
                 outfile << ", " << disArr[0]->getVelocity();
+                outfile << ", " << disArr[0]->getRss();
             }
             else
             {
                 outfile << 0.0;
+                outfile << ", " << 0.0;
                 outfile << ", " << 0.0;
             }
             outfile << std::endl;

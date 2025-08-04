@@ -72,4 +72,13 @@ struct mobilityLaw_W {
 
     }
 
+    std::pair<bool, double> velocity_Inf(double rss, double Temp)
+    {
+        double B_inf_SI = 1e8;
+        double B_inf = B_inf_SI * cs_SI / (mu_SI * b_SI);
+        double v_inf = std::abs(rss) / B_inf;
+        return std::make_pair(false, v_inf);
+
+    }
+
 };
