@@ -81,4 +81,14 @@ struct mobilityLaw_W {
 
     }
 
+    const double dG_kinkpair(double _rss, double _Temp)
+    {
+        double tau_abs = std::abs(_rss);
+        double Theta = tau_abs / tauP / a0;
+        const double dGkp = (Theta<1.0)? (std::pow(1.0-std::pow(Theta,p),q)-_Temp/T0) : 0.0;
+        const double dGkp1 = (dGkp>0.0)? dGkp : 0.0;
+
+        return dGkp1;
+    }
+
 };
