@@ -10,7 +10,7 @@ unitTime = b_SI / cs_SI;
 % Assming crack-tip located at origin
 crack_tip = 0;
 tau_nuc = 1000e6 / mu_SI;        % [Pa], critical resolved shear stress for dislocation nucleation
-r_source = 50;     % [b], source position for dislocation nucleation
+r_source = 40;     % [b], source position for dislocation nucleation
 T = 1300; % [K], temperature
 % Function to calculate resolved shear stress
 tau_interaction = @(ri,rj) mu*b/(2*pi) / (ri-rj);   % dislocation interaction for screw dislocation

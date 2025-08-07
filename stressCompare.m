@@ -1,4 +1,14 @@
 clear
+% set(0, 'defaultTextInterpreter', 'latex');
+% set(0, 'defaultAxesTickLabelInterpreter', 'latex');
+% set(0, 'defaultLegendInterpreter', 'latex');
+set(0, 'defaultAxesFontSize', 14);
+set(0, 'defaultLegendFontSize', 14);
+set(0, 'defaultTextFontSize', 14);
+set(0, 'defaultAxesFontWeight', 'bold');
+set(0, 'defaultLegendFontWeight', 'bold');
+set(0, 'defaultTextFontWeight', 'bold');
+
 
 r_dis = 50;
 syz = @(x) 1/2/pi*sqrt(r_dis/x)/(x-r_dis);
@@ -25,3 +35,4 @@ fplot(@(x) syz(x)-syz_screw(x), 'LineWidth', 2, 'DisplayName', 'crack tip stress
 fplot(syz_shielding, 'LineWidth', 2, 'DisplayName', 'shielding stress')
 axis([0, 300, -0.01, 0.01])
 legend('Location', 'best')
+

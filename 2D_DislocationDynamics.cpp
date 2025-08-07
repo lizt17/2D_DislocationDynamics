@@ -8,6 +8,8 @@
 #include <map>
 #include <memory>
 #include <iomanip>
+#include <filesystem>
+#include <cstdlib>
 #include "MobilityLaw_W.hpp"
 #include "DislocationProperty.hpp"
 
@@ -18,8 +20,8 @@ const double b_SI = 2.74e-10;   // [m], burgers vector
 const double rho_SI = 19250.0;  // [kg/m^3]
 const double cs_SI = sqrt(mu_SI/rho_SI); // [m/s], speed of shear wave
 const double tauP_SI = 2030e6;  // [Pa]
-const double tau_friction_SI = 0.0e6; // [Pa], friction stress
 const double KG_SI = 2.1e6; // [Pa], clevage fracture toughness
+const double Ke_SI = 1.8e6;
 const double unitSIF = mu_SI * sqrt(b_SI);
 const double unitSIFrate = mu_SI * cs_SI / sqrt(b_SI);
 const double unitTime = b_SI / cs_SI;
@@ -30,19 +32,24 @@ const double b = 1.0;
 
 // Parameters
 const double tau_nuc = 500e6 / mu_SI;
+const double tau_friction_SI = 1000.0e6; // [Pa], friction stress
 const double tau_friction = tau_friction_SI / mu_SI; 
 const double r_source = 200.0;
-const double T = 200;
+const double T = 400;
 const double crack_tip = 0.0;
-const double KappDot = 100e6 / unitSIFrate;
-const double Kapp0 = 0.35e6 / unitSIF;
-const long int Nsteps = 10e6;
+const double KappDot = 0e6 / unitSIFrate;
+const double Kapp0 = 1.6e6 / unitSIF;
+// const double Kapp0 = 1e6 / unitSIF;
+const long int Nsteps = 2e7;
 const int outputNum = 200;
 const int outputInterval = Nsteps / outputNum;
-const double shearWaveFraction = 1e-4;
-const int maxNumDis = 5000;
+const double shearWaveFraction = 1e-5;
+const int maxNumDis = 100;
+const double Ke = Ke_SI / unitSIF;
+const double rs = std::pow(mu,2)*std::pow(b,2) / (8*M_PI*std::pow(Ke,2));
+// const double r_source = rs;
 
-double dxMax = 100.0;
+double dxMax = 10.0;
 
 // Stress functions
 double tau_interaction(double ri, double rj) 
@@ -59,15 +66,21 @@ double tau_applied(double Kapp, double r)
 }
 
 int main() {
+    std::cout << "Dislocation dynamics" << std::endl;
+    std::cout << "SIF [mu*b] = " << unitSIF << std::endl;
+    std::cout << "SIF rate [mu*b/cs] = " << unitSIFrate << std::endl;
+    std::cout << "Time unit [b/cs] = " << unitTime << std::endl;
     mobilityLaw_W mobilityLaw;
     
     int Nd = 0, nextDisID = 0;
     std::vector<std::shared_ptr<Dislocation>> disArr;
     double K0nuc = tau_nuc * sqrt(2.0 * M_PI * r_source) + mu * b / 2.0 / sqrt(2 * M_PI * r_source);
     std::cout << "nucleation Kapp0 [MPa m^0.5]= " << K0nuc * unitSIF / 1e6<< std::endl;
+    std::cout << "distance to source [b] = " << r_source << std::endl;
 
-    std::string outputDir = "output/";
-    std::ofstream outfile(outputDir+"outputVars.csv", std::ios::trunc);
+    std::string outputDir = "outputVars/";
+    std::ofstream outfile(outputDir+"outputVars_"+std::to_string(int(T))+"K.csv", std::ios::trunc);
+
     int outFileIndex = 0;
     // outfile << "time" << std::endl << "Number of dislocations" << std::endl << "RSS on source" << std::endl
     // << "Kapp" << std::endl << "Ktip";
@@ -218,7 +231,7 @@ int main() {
                 outfile << ", " << 0.0;
             }
             outfile << std::endl;
-            std::ofstream fileDis(outputDir + "dislocation_" + std::to_string(outFileIndex)+".csv", std::ios::trunc);
+            std::ofstream fileDis("output/dislocation_" + std::to_string(outFileIndex)+".csv", std::ios::trunc);
             for (int i = 0; i < Nd; ++i)
             {
                 fileDis << disArr[i]->getId() << ", " << disArr[i]->isAthermal() << ", ";
