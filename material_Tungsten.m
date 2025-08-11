@@ -29,4 +29,9 @@ kB_eV = 8.617e-5;
 
 DBTT = [600, 773];
 
+% Derive parameters
+unitSIF = mu_SI * sqrt(b_SI);
+unitSIFrate = mu_SI * cs_SI / sqrt(b_SI);
+unitTime = b_SI / cs_SI;
+
 save('matPara_W.mat')

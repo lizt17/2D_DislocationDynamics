@@ -9,35 +9,39 @@ unitTime = b_SI / cs_SI;
 % Ke = 2e6; % Pa`m^1/2
 % Assming crack-tip located at origin
 crack_tip = 0;
-tau_nuc = 200e6 / mu_SI;        % [Pa], critical resolved shear stress for dislocation nucleation
-r_source = 30;     % [m], source position for dislocation nucleation
-T = 300; % [K], temperature
+tau_nuc = 1000e6 / mu_SI;        % [Pa], critical resolved shear stress for dislocation nucleation
+r_source = 40;     % [b], source position for dislocation nucleation
+T = 1300; % [K], temperature
 % Function to calculate resolved shear stress
 tau_interaction = @(ri,rj) mu*b/(2*pi) / (ri-rj);   % dislocation interaction for screw dislocation
 tau_imgae = @(r) mu*b/(4*pi) ./ (r-crack_tip);       % image force for screw dislocation
 
 %% Define applied stress field
-KappDot = 10e6 / unitSIFrate;
+KappDot = 100e6 / unitSIFrate;
 % Kapp0 = 0.0e6 / unitSIF;
-Kapp0 = 0.053;
+Kapp0 = 0.13;
+K0nuc = tau_nuc*sqrt(2*pi*r_source) + mu*b/2/sqrt(2*pi*r_source);
+disp(['nucleation Kapp0 = ', num2str(K0nuc)])
 
 %% Define output variables
 nucleation = true; 
 dt = 10;
-dxMax = 10;
-Nsteps = 10000;
-outputInterval = 500;
+dxMax = 20;
+Nsteps = 5000000;
+outputNum = 50;
+outputInterval = Nsteps / outputNum;
 time_curr = 0;
 Vmax = 1.0;
 time = zeros(1, Nsteps);
 back_stress = zeros(1, Nsteps);
 rss_dis1 = zeros(1, Nsteps);
 output_rss_source = zeros(1, Nsteps);
+outputKD = zeros(1, Nsteps);
 
 %% Initiate dislocation configuration
 % Nd always represents the number of dislocations
 % nextDisID-1 is total number of dislocations include annihilated ones
-Nd = 1;
+Nd = 0;
 nextDisID = Nd + 1; 
 disArr = struct('id', {}, 'position', {}, 'velocity', {});
 
@@ -56,7 +60,11 @@ ylabel('Time [b/cs]')
 for kInc = 1: Nsteps
 
     time(kInc) = time_curr;
-    Kapp = Kapp0 + KappDot * time_curr;
+    if kInc == 1
+        Kapp = Kapp0 + KappDot * time_curr;
+    else
+        Kapp = Kapp0 + KappDot * time_curr - outputKD(kInc-1);
+    end
     tau_applied = @(r) Kapp ./ sqrt(2*pi*r);
 
 %% Dislocation nucleation
@@ -78,6 +86,7 @@ if nucleation
     end
 end
 %% Resolved shear stress
+if Nd > 0
     currP = zeros(1, Nd);
     tau_int = zeros(1, Nd);
 
@@ -97,9 +106,15 @@ end
     end
 
     tau_app = tau_applied(currP); 
+    Kd = mu*b./sqrt(2*pi*currP);
+    KD = sum(Kd);
+    outputKD(kInc) = KD;
+    % tau_app = (Kapp-KD) ./ sqrt(2*pi*currP); 
     tau_im = tau_imgae(currP);
     rss = tau_app + tau_int - tau_im;
-    rss_dis1(kInc) = rss(1); % Store resolved shear stress for first dislocation
+    if ~isempty(rss)
+        rss_dis1(kInc) = rss(1); % Store resolved shear stress for first dislocation
+    end
 
 %% Mobility law
     [currV, athermal] = mobilityLaw_W(rss, T);
@@ -122,6 +137,7 @@ end
     else
         dt = min(dcurrP(dcurrP > 0)) / Vmax; 
     end
+    dt = min(dt,1e4);
     newP = currP + currV * dt; % Update positions based on velocities
     outBoundary = find(newP <= crack_tip);
     newP(outBoundary) = crack_tip;
@@ -151,8 +167,9 @@ end
 %% Dislocation annihilation
     disArr(outBoundary) = []; % Remove dislocations that moved out of boundary
     Nd = Nd - length(outBoundary);
-
-    dt = min(dxMax/Vmax, 1e6);
+else
+    dt = 1e3;
+end % end of no dislocations case
     time_curr = time_curr + dt;
 
 end
@@ -160,19 +177,27 @@ end
 %% 
 grid on
 title('Dislocation Dynamics Simulation')
-axis([0, x_leadingDis*1.5, 0, time_curr]);
-Kd = 1;
 disp('current SIF [MPa m^0.5] = ')
 disp(Kapp*unitSIF/1e6)
 disp(['Annihilated dislocations = ', num2str(nextDisID - Nd - 1)]);
+% axis([0, x_leadingDis*1.5, 0, time_curr]);
 
 figure
 hold on
 plot(time, rss_dis1, 'LineWidth', 2, 'DisplayName', 'Resolved Shear Stress of Dislocation 1');
 plot(time, back_stress, 'LineWidth', 2, 'DisplayName', 'Back Stress');
 plot(time, output_rss_source, 'LineWidth', 2, 'DisplayName', 'Stress on source')
-axis([0, time(end), -0.01, 0.01])
+% axis([0, time(end), -0.01, 0.01])
 xlabel('Time [b/cs]');
 ylabel('Stress [\mu]')
 grid on
 legend('Location', 'best')
+
+figure
+hold on
+plot(time, outputKD *unitSIF/1e6, 'LineWidth', 2, 'DisplayName', 'Shielding');
+plot(time, (Kapp0 + KappDot * time - outputKD)*unitSIF/1e6, 'LineWidth', 2, 'DisplayName', 'K_{tip} SIF');
+xlabel('Time [b/cs]');
+ylabel('SIF [MPa m^{0.5}]');
+legend('Location', 'best')
+grid on
