@@ -5,7 +5,7 @@ set(0, 'defaultLegendInterpreter', 'latex');
 
 outputDir = "output/";
 outputVar = "outputVars/";
-data = load(outputVar + "outputVars_77K.csv");
+data = load(outputVar + "outputVars_500K.csv");
 
 time = data(:,1);
 Nd = data(:,2);

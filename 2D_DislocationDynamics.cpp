@@ -35,16 +35,16 @@ const double tau_nuc = 2000e6 / mu_SI;
 const double tau_friction_SI = 500.0e6; // [Pa], friction stress
 const double tau_friction = tau_friction_SI / mu_SI; 
 const double r_source = 150.0;
-const double T = 77;
+const double T = 500;
 const double crack_tip = 0.0;
-const double KappDot = 1e6 / unitSIFrate;
+const double KappDot = 12e6 / unitSIFrate;
 const double Kapp0 = 1.0e6 / unitSIF;
 // const double Kapp0 = 1e6 / unitSIF;
-const long int Nsteps = 10e7;
+const long int Nsteps = 15e7;
 const int outputNum = 200;
 const int outputInterval = Nsteps / outputNum;
 const double shearWaveFraction = 1e-4;
-const int maxNumDis = 100;
+const int maxNumDis = 500;
 const double Ke = Ke_SI / unitSIF;
 const double rs = std::pow(mu,2)*std::pow(b,2) / (8*M_PI*std::pow(Ke,2));
 // const double r_source = rs;
@@ -52,7 +52,7 @@ const double rs = std::pow(mu,2)*std::pow(b,2) / (8*M_PI*std::pow(Ke,2));
 // TODO: Mode-I loading
 // Add grain boundary
 
-double dxMax = 150.0;
+double dxMax = 500.0;
 
 // Stress functions
 double tau_interaction(double ri, double rj) 
